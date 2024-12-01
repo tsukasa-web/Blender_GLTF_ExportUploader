@@ -1,0 +1,144 @@
+# Blender GLTF/GLBエクスポート設定
+export_settings:
+  # 基本設定
+  filepath: ""  # 出力ファイルパス (default: "")
+  check_existing: true  # 既存ファイルの上書き確認 (default: true)
+  export_format: ""  # 出力形式 - Binary(効率的) or JSON(編集しやすい) (default: "")
+  export_copyright: ""  # 著作権情報 (default: "")
+  gltf_export_id: ""  # エクスポーターの識別子 (default: "")
+
+  # その他
+  collection: ""  # ソースコレクション (default: "")
+  at_collection_center: false  # コレクションの中心でエクスポート (default: false)
+  export_loglevel: -1  # ログレベル (default: -1)
+  will_save_settings: false  # エクスポート設定を保存 (default: false)
+  filter_glob: "*.glb;*.gltf"  # フィルターグロブ (default: "*.glb;*.gltf")
+
+  # Include設定 ================================================================
+  # Limit to
+  use_selection: false  # 選択オブジェクトのみ (default: false)
+  use_visible: false  # 表示オブジェクトのみ (default: false)
+  use_renderable: false  # レンダリング可能なオブジェクトのみ (default: false)
+  use_active_collection: false  # アクティブコレクションのみ (default: false)
+  use_active_collection_with_nested: true  # ネストされたコレクションを含める (default: true)
+  use_active_scene: true  # アクティブシーンのみ (default: true)
+  # Data
+  export_extras: false  # カスタムプロパティをglTF extrasとしてエクスポート (default: false)
+  export_cameras: false  # カメラ (default: false)
+  export_lights: false  # ライト (default: false)
+
+  # Transform設定 ================================================================
+  export_yup: true  # glTF規約のY-up方向でエクスポート (default: true)
+
+  # Data設定 ================================================================
+  # Scene Graph
+  export_gn_mesh: false  # ジオメトリノードインスタンスをエクスポート（実験的） (default: false)
+  export_gpu_instances: false  # GPUインスタンス (default: false)
+  export_hierarchy_flatten_objs: false  # オブジェクト階層を平坦化 (default: false)
+  export_hierarchy_full_collections: false  # 完全なコレクション階層をエクスポート (default: false)
+  # Mesh設定
+  export_apply: false  # モディファイアを適用（アーマチュアを除く） (default: false)
+  export_texcoords: true  # UV座標 (default: true)
+  export_normals: true  # 法線 (default: true)
+  export_tangents: false  # 接線 (default: false)
+  export_attributes: false  # カスタム属性 (default: false)
+  use_mesh_edges: false  # エッジ (default: false)
+  use_mesh_vertices: false  # 頂点 (default: false)
+  export_shared_accessors: false  # 共有アクセサーを使用 (default: false)
+  # 頂点カラー設定
+  export_vertex_color: MATERIAL  # 頂点カラーの使用方法 (MATERIAL, ACTIVE, NONE) (default: MATERIAL)
+  export_all_vertex_colors: false  # すべての頂点カラーをエクスポート (default: false)
+  export_active_vertex_color_when_no_material: true  # マテリアルがない場合アクティブな頂点カラーを使用 (default: true)
+  # マテリアル設定
+  export_materials: EXPORT  # マテリアル (EXPORT, PLACEHOLDER, NONE) (default: EXPORT)
+  export_image_format: AUTO  # 画像フォーマット (AUTO, JPEG, WEBP, NONE) (default: AUTO)
+  export_jpeg_quality: 75  # JPEG品質 (0-100) (default: 75)
+  export_image_quality: 75  # 画像品質 (0-100) (default: 75)
+  export_image_add_webp: false  # WebPテクスチャを作成 (default: false)
+  export_image_webp_fallback: false  # WebPのフォールバックとしてPNGを作成 (default: false)
+  export_keep_originals: false  # オリジナルテクスチャを保持 (default: false)
+  # シェイプキー設定
+  export_morph: true  # シェイプキー (default: true)
+  export_morph_normal: true  # シェイプキーの法線 (default: true)
+  export_morph_tangent: false  # シェイプキーの接線 (default: false)
+  # Optimize Shapekeys
+  export_try_sparse_sk: true  # 可能な場合Sparseアクセサを使用 (default: true)
+  export_try_omit_sparse_sk: false  # 空のデータの場合Sparseアクセサを省略 (default: false)
+  # Armature
+  export_rest_position_armature: true  # レストポジションのアーマチュアを使用 (default: true)
+  export_def_bones: false  # 変形ボーンのみ (default: false)
+  export_armature_object_remove: false  # 可能な場合アーマチュアオブジェクトを削除 (default: false)
+  export_hierarchy_flatten_bones: false  # ボーン階層を平坦化 (default: false)
+  # Skinning
+  export_skins: true  # スキニング (default: true)
+  export_influence_nb: 4  # ボーンの影響数 (1以上) (default: 4)
+  export_all_influences: false  # すべてのボーンの影響をエクスポート (default: false)
+  # Lighting
+  export_import_convert_lighting_mode: SPEC  # ライティングモード変換 (SPEC, COMPAT, RAW) (default: SPEC)
+  # Compression(Draco)
+  export_draco_mesh_compression_enable: false  # Draco圧縮を使用 (default: false)
+  export_draco_mesh_compression_level: 6  # 圧縮レベル (0-10) (default: 6)
+  export_draco_position_quantization: 14  # 位置の量子化 (0-30) (default: 14)
+  export_draco_normal_quantization: 10  # 法線の量子化 (0-30) (default: 10)
+  export_draco_texcoord_quantization: 12  # UV座標の量子化 (0-30) (default: 12)
+  export_draco_color_quantization: 10  # カラーの量子化 (0-30) (default: 10)
+  export_draco_generic_quantization: 12  # その他の量子化 (0-30) (default: 12)
+
+  # Animation設定 ================================================================
+  export_animations: false  # アニメーション (default: false)
+  export_animation_mode: ACTIONS  # アニメーションモード (ACTIONS, ACTIVE_ACTIONS, BROADCAST, NLA_TRACKS, SCENE) (default: ACTIONS)
+  export_bake_animation: false  # すべてのオブジェクトアニメーションをベイク (default: false)
+  # Rest&Ranges
+  export_current_frame: false  # 現在のフレームをレスト変換として使用 (default: false)
+  export_frame_range: true  # フレーム範囲を制限 (default: true)
+  export_anim_slide_to_zero: false  # アニメーションを0から開始 (default: false)
+  export_negative_frame: SLIDE  # 負のフレーム処理 (SLIDE, CROP) (default: SLIDE)
+  # Armature
+  export_anim_single_armature: true  # すべてのアーマチュアアクションをエクスポート (default: true)
+  export_anim_scene_split_object: true  # オブジェクトごとにアニメーションを分割 (default: true)
+  export_reset_pose_bones: false  # アクション間でポーズボーンをリセット (default: false)
+  export_leaf_bone: false  # リーフボーンの追加 (default: false)
+  # Shape Key Animation
+  export_morph_animation: true  # シェイプキーアニメーション (default: true)
+  export_morph_reset_sk_data: true  # アクション間でシェイプキーをリセット (default: true)
+  # Sampling Animation
+  export_force_sampling: true  # 常にサンプリング (default: true)
+  export_frame_step: 1  # フレームステップ (1-120) (default: 1)
+  # Animation Pointer
+  export_pointer_animation: false  # アニメーションポインタ（実験的） (default: false)
+  # Optimize Animation
+  export_optimize_animation_size: true  # アニメーションサイズを最適化 (default: true)
+  export_optimize_animation_keep_anim_armature: true  # ボーンのチャンネルを強制保持 (default: true)
+  export_optimize_animation_keep_anim_object: false  # オブジェクトのチャンネルを強制保持 (default: false)
+  export_optimize_disable_viewport: false  # 他のオブジェクトのビューポートを無効化 (default: false)
+
+  # アクションフィルター設定
+  export_action_filter: false  # アクションフィルター (default: false)
+  export_extra_animations: false  # 追加アニメーション (default: false)
+  export_original_specular: false  # オリジナルのPBRスペキュラーをエクスポート (default: false)
+  export_convert_animation_pointer: false  # アニメーションポインタに変換 (default: false)
+
+  # gltf圧縮設定
+  export_use_gltfpack: false  # gltfpackを使用してメッシュの簡略化やテクスチャ圧縮を行う (default: false)
+  export_gltfpack_tc: true  # KTX2形式でテクスチャを圧縮 (default: true)
+  export_gltfpack_tq: 8  # テクスチャエンコード品質 (1-10) (default: 8)
+  export_gltfpack_si: 1.0  # メッシュ単純化率 (0-1) (default: 1.0)
+  export_gltfpack_sa: false  # 強制的なメッシュ単純化 (default: false)
+  export_gltfpack_slb: false  # 境界頂点をロック (default: false)
+  export_gltfpack_vp: 14  # 位置の量子化 (1-16) (default: 14)
+  export_gltfpack_vt: 12  # UV座標の量子化 (1-16) (default: 12)
+  export_gltfpack_vn: 8  # 法線/接線の量子化 (1-16) (default: 8)
+  export_gltfpack_vc: 8  # 頂点カラーの量子化 (1-16) (default: 8)
+  export_gltfpack_vpi: Integer  # 頂点位置属性タイプ (Integer, Normalized, Floating-point) (default: Integer)
+  export_gltfpack_noq: true  # 量子化を無効化 (default: true)
+
+# 出力設定
+output_directory: "./output"  # 出力ディレクトリ (default: "./output")
+
+# FTP設定
+ftp_settings:
+  host: ftp.example.com  # FTPサーバーのホスト名 (default: "")
+  port: 21  # FTPポート番号 (default: 21)
+  username: user  # FTPユーザー名 (default: "")
+  password: password  # FTPパスワード (default: "")
+  remote_directory: /public_html/models  # アップロード先のリモートディレクトリ (default: "/")
