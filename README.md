@@ -109,9 +109,19 @@ BlenderのGLTF/GLBエクスポート機能をコンソールから実行し、FT
 #### よくあるエラーと解決方法
 1. 「'blender'は認識されていないコマンドです」
    - Blenderのインストールフォルダを環境変数PATHに追加する必要があります
-   - または、Blenderの実行ファイルのフルパスを使用してください
+   - または、Blenderの実行ファイルのフルパスを使用してください（こちらが手っ取り早いです）
    ```bash
    "C:\Program Files\Blender Foundation\Blender [version]\blender.exe" -b ...
+   ```
+   パスの例（Win）
+   ```
+   "C:\Program Files\Blender Foundation\Blender 4.2\blender.exe"
+   "C:\Program Files (x86)\Steam\steamapps\common\Blender\blender.exe"
+   ```
+   パスの例（Mac）
+   ```
+   "/Applications/Blender.app/Contents/MacOS/Blender"
+   "~/Library/Application Support/Steam/steamapps/common/Blender/blender.app/Contents/MacOS/blender"
    ```
 
 2. 「ファイルが見つかりません」
