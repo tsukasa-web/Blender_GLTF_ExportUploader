@@ -170,18 +170,27 @@ export_settings:
   export_gltfpack_noq: true
 
 # 出力設定
-# 出力ディレクトリ (default: "./output")
+# モデル出力ディレクトリ (default: "./output")
 output_directory: "./output"
 
 # FTP設定
 ftp_settings:
   # FTPサーバーのホスト名 (default: "")
-  host: ftp.example.com
+  host: "ftp-hogehoge.net"
   # FTPポート番号 (default: 21)
   port: 21
   # FTPユーザー名 (default: "")
-  username: user
+  username: "*****"
   # FTPパスワード (default: "")
-  password: password
+  password: "*****"
   # アップロード先のリモートディレクトリ (default: "/")
-  remote_directory: /public_html/models
+  remote_directory: "/assets/model/test/"
+
+# 処理対象ファイルリスト
+blend_files:
+  - file_path: "./model_01.blend"    # .blendファイルのパス
+    output_name: "output_01.gltf"        # 出力ファイル名
+    remote_path: "/assets/model/characters/"  # 個別のアップロード先
+  - file_path: "./model_02.blend"    # .blendファイルのパス
+    output_name: "output_02.gltf"        # 出力ファイル名
+    remote_path: "/assets/model/characters/"  # 個別のアップロード先

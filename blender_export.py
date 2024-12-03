@@ -14,7 +14,7 @@ class SimpleYAMLParser:
             return None
 
         # 文字列を小文字に変換して比較
-        value_lower = str(value_str).lower()  # 確実に文字列に変換
+        value_lower = str(value_str).lower()
         if value_lower == 'true':
             return True
         if value_lower == 'false':
@@ -39,38 +39,105 @@ class SimpleYAMLParser:
 
     def parse_file(self, file_path):
         """YAMLファイルをパース"""
-        current_dict = self.data
+        self.data = {}
+        current_dict = None
         current_indent = 0
         path_stack = []
 
+        print("\n=== YAMLパース処理開始 ===")
+        # print(f"ファイル: {file_path}")
+
         with open(file_path, 'r', encoding='utf-8') as f:
-            for line in f:
+            lines = f.readlines()
+            i = 0
+            while i < len(lines):
+                line = lines[i].rstrip()
                 if line.strip().startswith('#') or not line.strip():
+                    i += 1
                     continue
 
                 indent = len(line) - len(line.lstrip())
                 line = line.strip()
+                # print(f"\n処理行: {line}")
+                # print(f"インデント: {indent}")
+
+                if line.startswith('-'):  # リストアイテムの処理開始
+                    # print("リストアイテムの処理開始")
+                    if not isinstance(self.data.get(path_stack[-1]), list):
+                        self.data[path_stack[-1]] = []
+                        # print(f"新規リスト作成: {path_stack[-1]}")
+
+                    item_dict = {}
+
+                    # リストアイテムの最初の要素を処理
+                    if ':' in line[1:]:
+                        key, value = line[1:].split(':', 1)
+                        key = key.strip()
+                        value = value.strip()
+                        if '#' in value:
+                            value = value.split('#')[0].strip()
+                        item_dict[key] = self.parse_value(value)
+                        # print(f"リストアイテムの最初の要素を追加: {key} = {value}")
+
+                    self.data[path_stack[-1]].append(item_dict)
+                    current_dict = item_dict
+                    # print(f"現在のリスト状態: {self.data[path_stack[-1]]}")
+
+                    i += 1
+                    while i < len(lines):
+                        next_line = lines[i].rstrip()
+                        next_indent = len(next_line) - len(next_line.lstrip())
+                        # print(f"サブアイテム処理: {next_line}")
+                        # print(f"サブインデント: {next_indent}")
+
+                        if not next_line.strip() or next_line.strip().startswith('#'):
+                            i += 1
+                            continue
+
+                        if next_indent <= indent:
+                            break
+
+                        next_line = next_line.lstrip()
+                        if ':' in next_line:
+                            key, value = next_line.split(':', 1)
+                            key = key.strip()
+                            value = value.strip()
+
+                            if '#' in value:
+                                value = value.split('#')[0].strip()
+
+                            current_dict[key] = self.parse_value(value)
+                            # print(f"アイテム追加: {key} = {value}")
+                        i += 1
+                    continue
 
                 if ':' in line:
                     key, value = line.split(':', 1)
                     key = key.strip()
                     value = value.strip()
 
-                    while indent < current_indent:
-                        current_dict = self.data
-                        for p in path_stack[:-1]:
-                            current_dict = current_dict[p]
-                        current_indent = indent
-                        path_stack.pop()
-
-                    if not value:
-                        current_dict[key] = {}
-                        current_dict = current_dict[key]
-                        path_stack.append(key)
-                        current_indent = indent
+                    if indent == 0:  # トップレベルの項目
+                        current_dict = {}
+                        self.data[key] = current_dict
+                        path_stack = [key]
+                        current_indent = 0
                     else:
-                        current_dict[key] = self.parse_value(value)
+                        if not value:  # サブディクショナリの開始
+                            new_dict = {}
+                            current_dict[key] = new_dict
+                            current_dict = new_dict
+                            path_stack.append(key)
+                            current_indent = indent
+                        else:  # 値の設定
+                            # コメントを除去
+                            if '#' in value:
+                                value = value.split('#')[0].strip()
+                            current_dict[key] = self.parse_value(value)
 
+                i += 1
+
+        # print("\n=== パース結果 ===")
+        # print(self.data)
         return self.data
 
 class BlenderExporter:
@@ -80,8 +147,9 @@ class BlenderExporter:
         self.config = yaml_parser.parse_file(config_path)
 
         self.export_config = self.config.get('export_settings', {})
-        self.output_dir = Path(self.config.get('output_directory', './output'))
-        self.ftp_config = self.config.get('ftp_settings', {})
+        self.ftp_settings = self.config.get('ftp_settings', {})
+        self.output_dir = Path(str(self.config.get('output_directory', './output')))
+        self.blend_files = self.config.get('blend_files', [])
 
         if output_filename:
             self.export_config['filename'] = output_filename
@@ -209,7 +277,7 @@ class BlenderExporter:
             'export_draco_normal_quantization': int(self.export_config.get('export_draco_normal_quantization', 10)),
             'export_draco_texcoord_quantization': int(self.export_config.get('export_draco_texcoord_quantization', 12)),
             'export_draco_color_quantization': int(self.export_config.get('export_draco_color_quantization', 10)),
-            'export_draco_generic_quantization': int(self.export_config.get('export_draco_generic_quantization', 12)),
+            'export_draco_generic_quantization': int(self.export_config.get('export_draco_generic_quantization', 12))
         }
 
         # ブール値パラメータの追加
@@ -234,15 +302,15 @@ class BlenderExporter:
 
             ftp = ftplib.FTP()
             ftp.connect(
-                host=self.ftp_config['host'],
-                port=self.ftp_config.get('port', 21)
+                host=self.ftp_settings['host'],
+                port=self.ftp_settings.get('port', 21)
             )
             ftp.login(
-                user=self.ftp_config['username'],
-                passwd=self.ftp_config['password']
+                user=self.ftp_settings['username'],
+                passwd=self.ftp_settings['password']
             )
 
-            remote_dir = self.ftp_config.get('remote_directory', '/')
+            remote_dir = self.ftp_settings.get('remote_directory', '/')
             ftp.cwd(remote_dir)
 
             for file_path in self.output_dir.glob('*'):
@@ -257,6 +325,75 @@ class BlenderExporter:
         except Exception as e:
             print(f"FTPアップロードエラー: {str(e)}")
             raise
+
+    def process_files(self):
+        """設定ファイルで指定された全ファイルを処理"""
+        print("\n=== ファイル処理開始 ===")
+        if not self.blend_files:
+            print("処理対象ファイルが指定されていません")
+            return
+
+        print(f"処理対象ファイル数: {len(self.blend_files)}")
+        # print(f"blend_files の型: {type(self.blend_files)}")
+        print(f"blend_files の内容: {self.blend_files}")
+
+        for file_info in self.blend_files:
+            print(f"\n--- .blendファイル情報処理開始 ---")
+            # print(f"file_info の型: {type(file_info)}")
+            # print(f"file_info の内容: {file_info}")
+            print(f"file_info のキー: {file_info.keys() if isinstance(file_info, dict) else 'Not a dict'}")
+
+            blend_file = None
+            try:
+                # file_pathの取得を確認
+                if isinstance(file_info, dict):
+                    file_path = file_info.get('file_path')
+                    print(f"取得したfile_path: {file_path}")
+                else:
+                    print(f"file_infoが辞書ではありません: {type(file_info)}")
+                    continue
+
+                if not file_path:
+                    print("エラー: file_pathが指定されていないファイルがあります")
+                    continue
+
+                blend_file = Path(file_path)
+                output_name = file_info.get('output_name')
+                remote_path = file_info.get('remote_path')
+
+                print(f"\n処理開始: {blend_file.name}")
+
+                # Blenderファイルを開く
+                bpy.ops.wm.open_mainfile(filepath=str(blend_file))
+
+                # 出力ファイル名を一時的に変更
+                original_filename = self.export_config.get('filename')
+                if output_name:
+                    self.export_config['filename'] = output_name
+
+                # エクスポート実行
+                self.export_gltf()
+
+                # 出力ファイル名を元に戻す
+                if output_name:
+                    self.export_config['filename'] = original_filename
+
+                # リモートパスの一時変更とアップロード
+                original_remote_dir = self.ftp_settings.get('remote_directory')
+                if remote_path:
+                    self.ftp_settings['remote_directory'] = remote_path
+
+                self.upload_to_ftp()
+
+                # リモートパスを元に戻す
+                if remote_path:
+                    self.ftp_settings['remote_directory'] = original_remote_dir
+
+                print(f"処理完了: {blend_file.name}")
+
+            except Exception as e:
+                file_name = blend_file.name if blend_file else "不明なファイル"
+                print(f"エラー ({file_name}): {str(e)}")
 
 def get_args():
     """コマンドライン引数を解析"""
@@ -288,17 +425,20 @@ def get_args():
     return output_filename, config_path
 
 def main():
-    """メイン処理"""
     try:
         output_filename, config_path = get_args()
-
         print("エクスポート処理を開始します...")
-        if output_filename:
-            print(f"出力ファイル名: {output_filename}")
 
         exporter = BlenderExporter(config_path=config_path, output_filename=output_filename)
-        exporter.export_gltf()
-        # exporter.upload_to_ftp()
+
+        # 複数ファイル処理の実行
+        if exporter.blend_files:
+            exporter.process_files()
+        else:
+            # 従来の単一ファイル処理
+            exporter.export_gltf()
+            exporter.upload_to_ftp()
+
         print("すべての処理が完了しました")
 
     except Exception as e:
