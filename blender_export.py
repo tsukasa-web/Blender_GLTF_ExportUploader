@@ -10,8 +10,8 @@ class SimpleYAMLParser:
 
     def parse_value(self, value_str):
         """値を適切な型に変換"""
-        if not value_str:
-            return None
+        if value_str is None or value_str == "":
+            return value_str
 
         # 文字列を小文字に変換して比較
         value_lower = str(value_str).lower()
@@ -24,121 +24,127 @@ class SimpleYAMLParser:
         try:
             if '.' in str(value_str):
                 return float(value_str)
-            return int(value_str)
-        except ValueError:
+            if str(value_str).isdigit():
+                return int(value_str)
+        except (ValueError, AttributeError):
             pass
 
-        # クォートの除去
+        # 文字列の処理
         if isinstance(value_str, str):
+            # クォートの除去
             if value_str.startswith('"') and value_str.endswith('"'):
                 return value_str[1:-1]
             if value_str.startswith("'") and value_str.endswith("'"):
                 return value_str[1:-1]
+            return value_str.strip()
 
         return value_str
 
     def parse_file(self, file_path):
         """YAMLファイルをパース"""
-        self.data = {}
-        current_dict = None
-        current_indent = 0
-        path_stack = []
-
         print("\n=== YAMLパース処理開始 ===")
-        # print(f"ファイル: {file_path}")
+        self.data = {}
+        current_dict = self.data
+        indent_stack = [(0, self.data)]
+        last_indent = 0
+        last_key = None
 
         with open(file_path, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-            i = 0
-            while i < len(lines):
-                line = lines[i].rstrip()
-                if line.strip().startswith('#') or not line.strip():
-                    i += 1
-                    continue
+            for line_num, line in enumerate(f, 1):
+                try:
+                    # コメントと空行をスキップ
+                    line = line.rstrip()
+                    if not line or line.strip().startswith('#'):
+                        print(f"  スキップ: コメントまたは空行")
+                        continue
 
-                indent = len(line) - len(line.lstrip())
-                line = line.strip()
-                # print(f"\n処理行: {line}")
-                # print(f"インデント: {indent}")
+                    # インデントを計算
+                    indent = len(line) - len(line.lstrip())
+                    line = line.lstrip()
+                    print(f"  インデント: {indent}")
+                    print(f"  処理対象: {line}")
 
-                if line.startswith('-'):  # リストアイテムの処理開始
-                    # print("リストアイテムの処理開始")
-                    if not isinstance(self.data.get(path_stack[-1]), list):
-                        self.data[path_stack[-1]] = []
-                        # print(f"新規リスト作成: {path_stack[-1]}")
+                    # リストアイテムの処理
+                    if line.startswith('-'):
+                        print("  リストアイテムの処理開始")
+                        line = line[1:].strip()
 
-                    item_dict = {}
+                        # インデントに基づいて適切な親の辞書を見つける
+                        while len(indent_stack) > 1 and indent_stack[-1][0] >= indent:
+                            indent_stack.pop()
 
-                    # リストアイテムの最初の要素を処理
-                    if ':' in line[1:]:
-                        key, value = line[1:].split(':', 1)
-                        key = key.strip()
-                        value = value.strip()
-                        if '#' in value:
-                            value = value.split('#')[0].strip()
-                        item_dict[key] = self.parse_value(value)
-                        # print(f"リストアイテムの最初の要素を追加: {key} = {value}")
+                        parent_dict = indent_stack[-1][1]
 
-                    self.data[path_stack[-1]].append(item_dict)
-                    current_dict = item_dict
-                    # print(f"現在のリスト状態: {self.data[path_stack[-1]]}")
+                        # 親キーのリストを初期化
+                        if last_key:
+                            if last_key not in parent_dict:
+                                parent_dict[last_key] = []
+                            elif isinstance(parent_dict[last_key], dict):
+                                parent_dict[last_key] = []
 
-                    i += 1
-                    while i < len(lines):
-                        next_line = lines[i].rstrip()
-                        next_indent = len(next_line) - len(next_line.lstrip())
-                        # print(f"サブアイテム処理: {next_line}")
-                        # print(f"サブインデント: {next_indent}")
-
-                        if not next_line.strip() or next_line.strip().startswith('#'):
-                            i += 1
-                            continue
-
-                        if next_indent <= indent:
-                            break
-
-                        next_line = next_line.lstrip()
-                        if ':' in next_line:
-                            key, value = next_line.split(':', 1)
+                        if ':' in line:
+                            key, value = line.split(':', 1)
                             key = key.strip()
                             value = value.strip()
-
                             if '#' in value:
                                 value = value.split('#')[0].strip()
 
-                            current_dict[key] = self.parse_value(value)
-                            # print(f"アイテム追加: {key} = {value}")
-                        i += 1
-                    continue
+                            # 新しいリストアイテムを作成して追加
+                            list_item = {key: self.parse_value(value)}
+                            if last_key:
+                                parent_dict[last_key].append(list_item)
+                                print(f"  リストアイテム追加: {list_item}")
+                                current_dict = list_item
+                                indent_stack.append((indent + 2, current_dict))  # インデントレベルを+2に設定
 
-                if ':' in line:
-                    key, value = line.split(':', 1)
-                    key = key.strip()
-                    value = value.strip()
+                        last_indent = indent
+                        continue
 
-                    if indent == 0:  # トップレベルの項目
-                        current_dict = {}
-                        self.data[key] = current_dict
-                        path_stack = [key]
-                        current_indent = 0
-                    else:
-                        if not value:  # サブディクショナリの開始
-                            new_dict = {}
-                            current_dict[key] = new_dict
-                            current_dict = new_dict
-                            path_stack.append(key)
-                            current_indent = indent
-                        else:  # 値の設定
-                            # コメントを除去
-                            if '#' in value:
-                                value = value.split('#')[0].strip()
-                            current_dict[key] = self.parse_value(value)
+                    # キー・バリューペアの処理
+                    if ':' in line:
+                        key, value = line.split(':', 1)
+                        key = key.strip()
+                        value = value.strip()
 
-                i += 1
+                        if '#' in value:
+                            value = value.split('#')[0].strip()
 
-        # print("\n=== パース結果 ===")
-        # print(self.data)
-        return self.data
+                        # インデントに基づいて適切な親の辞書を見つける
+                        while len(indent_stack) > 1 and indent_stack[-1][0] >= indent:
+                            indent_stack.pop()
+
+                        current_dict = indent_stack[-1][1]
+
+                        if not value or value.isspace():
+                            if key == 'blend_files':  # blend_filesの場合は配列として初期化
+                                current_dict[key] = []
+                            else:
+                                new_dict = {}
+                                current_dict[key] = new_dict
+                                current_dict = new_dict
+                                indent_stack.append((indent, current_dict))
+                            print(f"  新規{'リスト' if key == 'blend_files' else '辞書'}作成: {key}")
+                        else:
+                            if isinstance(current_dict, dict):
+                                current_dict[key] = self.parse_value(value)
+                                print(f"  値を設定: {key} = {self.parse_value(value)}")
+                            else:
+                                print(f"  現在の辞書がリストの要素に値を設定: {key} = {self.parse_value(value)}")
+
+                        last_key = key
+                        last_indent = indent
+
+                except Exception as e:
+                    print(f"エラー (行 {line_num}): {str(e)}")
+                    print(f"現在のコンテキスト:")
+                    print(f"  行: {line}")
+                    print(f"  インデント: {indent}")
+                    print(f"  current_dict: {current_dict}")
+                    print(f"  indent_stack: {indent_stack}")
+                    print(f"  last_key: {last_key}")
+                    raise
+
+            return self.data
 
 class BlenderExporter:
     def __init__(self, config_path="config.yaml", output_filename=None):
@@ -146,10 +152,28 @@ class BlenderExporter:
         yaml_parser = SimpleYAMLParser()
         self.config = yaml_parser.parse_file(config_path)
 
+        # 確実に辞書として初期化
         self.export_config = self.config.get('export_settings', {})
-        self.ftp_settings = self.config.get('ftp_settings', {})
+
+        # FTP設定の初期化を明示的に行う
+        ftp_settings = self.config.get('ftp_settings', {})
+        self.ftp_settings = {
+            'host': ftp_settings.get('host', ''),
+            'port': ftp_settings.get('port', 21),
+            'username': ftp_settings.get('username', ''),
+            'password': ftp_settings.get('password', ''),
+            'remote_directory': ftp_settings.get('remote_directory', '/')
+        }
+
         self.output_dir = Path(str(self.config.get('output_directory', './output')))
         self.blend_files = self.config.get('blend_files', [])
+
+        print("\n=== 設定情報デバッグ ===")
+        print(f"export_config type: {type(self.export_config)}")
+        print(f"ftp_settings type: {type(self.ftp_settings)}")
+        print(f"ftp_settings content: {self.ftp_settings}")  # 内容も確認
+        print(f"output_dir type: {type(self.output_dir)}")
+        print(f"blend_files type: {type(self.blend_files)}")
 
         if output_filename:
             self.export_config['filename'] = output_filename
@@ -300,6 +324,14 @@ class BlenderExporter:
         try:
             print("FTPアップロードを開始します...")
 
+            # FTP設定の検証
+            if not self.ftp_settings.get('host'):
+                raise ValueError("FTPホストが設定されていません")
+            if not self.ftp_settings.get('username'):
+                raise ValueError("FTPユーザー名が設定されていません")
+            if not self.ftp_settings.get('password'):
+                raise ValueError("FTPパスワードが設定されていません")
+
             ftp = ftplib.FTP()
             ftp.connect(
                 host=self.ftp_settings['host'],
@@ -311,11 +343,13 @@ class BlenderExporter:
             )
 
             remote_dir = self.ftp_settings.get('remote_directory', '/')
+            print(f"リモートディレクトリに移動: {remote_dir}")
             ftp.cwd(remote_dir)
 
             for file_path in self.output_dir.glob('*'):
                 if file_path.is_file():
                     with open(file_path, 'rb') as file:
+                        print(f'アップロード開始: {file_path.name}')
                         ftp.storbinary(f'STOR {file_path.name}', file)
                         print(f'アップロード完了: {file_path.name}')
 
@@ -329,67 +363,66 @@ class BlenderExporter:
     def process_files(self):
         """設定ファイルで指定された全ファイルを処理"""
         print("\n=== ファイル処理開始 ===")
+        if not isinstance(self.ftp_settings, dict):
+            print("警告: FTP設定が辞書ではありません。辞書として初期化します。")
+            self.ftp_settings = {'remote_directory': self.ftp_settings if isinstance(self.ftp_settings, str) else '/'}
+
+        print("ftp_settings の型:", type(self.ftp_settings))
+        print("ftp_settings の内容:", self.ftp_settings)
+
         if not self.blend_files:
             print("処理対象ファイルが指定されていません")
             return
 
         print(f"処理対象ファイル数: {len(self.blend_files)}")
-        # print(f"blend_files の型: {type(self.blend_files)}")
-        print(f"blend_files の内容: {self.blend_files}")
 
         for file_info in self.blend_files:
-            print(f"\n--- .blendファイル情報処理開始 ---")
-            # print(f"file_info の型: {type(file_info)}")
-            # print(f"file_info の内容: {file_info}")
-            print(f"file_info のキー: {file_info.keys() if isinstance(file_info, dict) else 'Not a dict'}")
+            print("\n=== ファイル処理デバッグ情報 ===")
+            print("file_info の型:", type(file_info))
+            print("file_info の内容:", file_info)
 
             blend_file = None
             try:
-                # file_pathの取得を確認
                 if isinstance(file_info, dict):
                     file_path = file_info.get('file_path')
-                    print(f"取得したfile_path: {file_path}")
-                else:
-                    print(f"file_infoが辞書ではありません: {type(file_info)}")
-                    continue
+                    output_name = file_info.get('output_name')
+                    remote_path = file_info.get('remote_path')
 
-                if not file_path:
-                    print("エラー: file_pathが指定されていないファイルがあります")
-                    continue
+                    if not file_path:
+                        print("エラー: file_pathが指定されていないファイルがあります")
+                        continue
 
-                blend_file = Path(file_path)
-                output_name = file_info.get('output_name')
-                remote_path = file_info.get('remote_path')
+                    blend_file = Path(file_path)
+                    print(f"\n処理開始: {blend_file.name}")
 
-                print(f"\n処理開始: {blend_file.name}")
+                    # Blenderファイルを開く
+                    bpy.ops.wm.open_mainfile(filepath=str(blend_file))
 
-                # Blenderファイルを開く
-                bpy.ops.wm.open_mainfile(filepath=str(blend_file))
+                    # 出力ファイル名を一時的に変更
+                    original_filename = self.export_config.get('filename')
+                    if output_name:
+                        self.export_config['filename'] = output_name
 
-                # 出力ファイル名を一時的に変更
-                original_filename = self.export_config.get('filename')
-                if output_name:
-                    self.export_config['filename'] = output_name
+                    # エクスポート実行
+                    self.export_gltf()
 
-                # エクスポート実行
-                self.export_gltf()
+                    # 出力ファイル名を元に戻す
+                    if output_name:
+                        self.export_config['filename'] = original_filename
 
-                # 出力ファイル名を元に戻す
-                if output_name:
-                    self.export_config['filename'] = original_filename
+                    # リモートパスの一時変更とアップロード
+                    original_remote_dir = None
+                    if remote_path and 'remote_directory' in self.ftp_settings:
+                        original_remote_dir = self.ftp_settings['remote_directory']
+                        self.ftp_settings['remote_directory'] = remote_path
 
-                # リモートパスの一時変更とアップロード
-                original_remote_dir = self.ftp_settings.get('remote_directory')
-                if remote_path:
-                    self.ftp_settings['remote_directory'] = remote_path
+                    try:
+                        self.upload_to_ftp()
+                    finally:
+                        if original_remote_dir is not None:
+                            self.ftp_settings['remote_directory'] = original_remote_dir
 
-                self.upload_to_ftp()
-
-                # リモートパスを元に戻す
-                if remote_path:
-                    self.ftp_settings['remote_directory'] = original_remote_dir
-
-                print(f"処理完了: {blend_file.name}")
+                    print(f"処理完了: {blend_file.name}")
 
             except Exception as e:
                 file_name = blend_file.name if blend_file else "不明なファイル"
