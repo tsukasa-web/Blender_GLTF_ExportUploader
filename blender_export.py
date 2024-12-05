@@ -44,10 +44,10 @@ class SimpleYAMLParser:
         """YAMLファイルをパース"""
         print("\n=== YAMLパース処理開始 ===")
         self.data = {}
-        current_dict = self.data
         indent_stack = [(0, self.data)]
+        current_dict = self.data
+        current_list_item = None
         last_indent = 0
-        last_key = None
 
         with open(file_path, 'r', encoding='utf-8') as f:
             for line_num, line in enumerate(f, 1):
@@ -55,93 +55,75 @@ class SimpleYAMLParser:
                     # コメントと空行をスキップ
                     line = line.rstrip()
                     if not line or line.strip().startswith('#'):
-                        print(f"  スキップ: コメントまたは空行")
                         continue
 
                     # インデントを計算
                     indent = len(line) - len(line.lstrip())
                     line = line.lstrip()
-                    print(f"  インデント: {indent}")
-                    print(f"  処理対象: {line}")
 
                     # リストアイテムの処理
                     if line.startswith('-'):
-                        print("  リストアイテムの処理開始")
                         line = line[1:].strip()
-
-                        # インデントに基づいて適切な親の辞書を見つける
-                        while len(indent_stack) > 1 and indent_stack[-1][0] >= indent:
-                            indent_stack.pop()
-
                         parent_dict = indent_stack[-1][1]
-
-                        # 親キーのリストを初期化
-                        if last_key:
-                            if last_key not in parent_dict:
-                                parent_dict[last_key] = []
-                            elif isinstance(parent_dict[last_key], dict):
-                                parent_dict[last_key] = []
+                        last_key = list(parent_dict.keys())[-1] if parent_dict else None
 
                         if ':' in line:
                             key, value = line.split(':', 1)
                             key = key.strip()
                             value = value.strip()
-                            if '#' in value:
-                                value = value.split('#')[0].strip()
 
-                            # 新しいリストアイテムを作成して追加
-                            list_item = {key: self.parse_value(value)}
-                            if last_key:
-                                parent_dict[last_key].append(list_item)
-                                print(f"  リストアイテム追加: {list_item}")
-                                current_dict = list_item
-                                indent_stack.append((indent + 2, current_dict))  # インデントレベルを+2に設定
+                            # 新しいリストアイテムを作成
+                            current_list_item = {}
+                            if value:
+                                current_list_item[key] = self.parse_value(value)
 
-                        last_indent = indent
-                        continue
+                            # 親リストに追加
+                            if last_key and isinstance(parent_dict[last_key], list):
+                                parent_dict[last_key].append(current_list_item)
+
+                            # インデントスタックを更新
+                            indent_stack.append((indent, current_list_item))
 
                     # キー・バリューペアの処理
-                    if ':' in line:
+                    elif ':' in line:
                         key, value = line.split(':', 1)
                         key = key.strip()
                         value = value.strip()
 
-                        if '#' in value:
-                            value = value.split('#')[0].strip()
-
-                        # インデントに基づいて適切な親の辞書を見つける
-                        while len(indent_stack) > 1 and indent_stack[-1][0] >= indent:
+                        # インデントに基づいて適切な親を選択
+                        while len(indent_stack) > 1 and indent <= indent_stack[-1][0]:
                             indent_stack.pop()
+                            current_list_item = None
 
                         current_dict = indent_stack[-1][1]
 
-                        if not value or value.isspace():
-                            if key == 'blend_files':  # blend_filesの場合は配列として初期化
+                        # 値の処理
+                        if not value:
+                            # リストまたは新しいセクションの開始
+                            if key == 'blend_files':
                                 current_dict[key] = []
                             else:
                                 new_dict = {}
                                 current_dict[key] = new_dict
                                 current_dict = new_dict
                                 indent_stack.append((indent, current_dict))
-                            print(f"  新規{'リスト' if key == 'blend_files' else '辞書'}作成: {key}")
                         else:
-                            if isinstance(current_dict, dict):
-                                current_dict[key] = self.parse_value(value)
-                                print(f"  値を設定: {key} = {self.parse_value(value)}")
+                            # リストアイテムに属する値
+                            if current_list_item is not None and indent > last_indent:
+                                current_list_item[key] = self.parse_value(value)
                             else:
-                                print(f"  現在の辞書がリストの要素に値を設定: {key} = {self.parse_value(value)}")
+                                current_dict[key] = self.parse_value(value)
 
-                        last_key = key
-                        last_indent = indent
+                    last_indent = indent
 
                 except Exception as e:
                     print(f"エラー (行 {line_num}): {str(e)}")
-                    print(f"現在のコンテキスト:")
+                    print(f"現在の状態:")
                     print(f"  行: {line}")
                     print(f"  インデント: {indent}")
                     print(f"  current_dict: {current_dict}")
+                    print(f"  current_list_item: {current_list_item}")
                     print(f"  indent_stack: {indent_stack}")
-                    print(f"  last_key: {last_key}")
                     raise
 
             return self.data
@@ -153,11 +135,9 @@ class BlenderExporter:
         self.config = yaml_parser.parse_file(config_path)
 
         self.execution_settings = self.config.get('execution_settings', {})
-
-        # 確実に辞書として初期化
         self.export_config = self.config.get('export_settings', {})
 
-        # FTP設定の初期化を明示的に行う
+        # FTP設定の初期化
         ftp_settings = self.config.get('ftp_settings', {})
         self.ftp_settings = {
             'host': ftp_settings.get('host', ''),
@@ -170,12 +150,10 @@ class BlenderExporter:
         self.output_dir = Path(str(self.config.get('output_directory', './output')))
         self.blend_files = self.config.get('blend_files', [])
 
-        print("\n=== 設定情報デバッグ ===")
-        print(f"export_config type: {type(self.export_config)}")
-        print(f"ftp_settings type: {type(self.ftp_settings)}")
-        print(f"ftp_settings content: {self.ftp_settings}")  # 内容も確認
-        print(f"output_dir type: {type(self.output_dir)}")
-        print(f"blend_files type: {type(self.blend_files)}")
+        # print("\n=== 設定読み込み結果 ===")
+        # print(f"blend_files: {self.blend_files}")
+        # print(f"export_config: {self.export_config}")
+        # print(f"ftp_settings: {self.ftp_settings}")  # FTP設定の確認を追加
 
         if output_filename:
             self.export_config['filename'] = output_filename
@@ -194,6 +172,9 @@ class BlenderExporter:
         """GLTFエクスポート処理"""
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
+        print(f"\nエクスポート設定確認:")
+        print(f"  - 設定されているfilename: {self.export_config.get('filename', 'Not Set')}")
+
         # ブール値パラメータのリスト
         boolean_params = [
             'check_existing',
@@ -208,10 +189,7 @@ class BlenderExporter:
             'export_texcoords',
             'export_normals',
             'export_gn_mesh',
-            'export_draco_mesh_compression_enable',
             'export_tangents',
-            'export_unused_images',
-            'export_unused_textures',
             'export_all_vertex_colors',
             'export_active_vertex_color_when_no_material',
             'export_attributes',
@@ -234,7 +212,6 @@ class BlenderExporter:
             'export_force_sampling',
             'export_pointer_animation',
             'export_anim_single_armature',
-            'export_anim_scene_split_object',
             'export_reset_pose_bones',
             'export_current_frame',
             'export_rest_position_armature',
@@ -260,12 +237,8 @@ class BlenderExporter:
             'export_all_influences',
             'export_lights',
             'export_gpu_instances',
-            'export_action_filter',
-            'export_original_specular',
             'will_save_settings',
-            'export_hierarchy_full_collections',
-            'export_extra_animations',
-            'export_convert_animation_pointer'
+            'export_hierarchy_full_collections'
         ]
 
         # エクスポート引数の準備
@@ -274,16 +247,14 @@ class BlenderExporter:
             'filepath': str(self.output_dir / self.export_config.get('filename', 'model.gltf')),
             'export_format': self.export_config.get('export_format', 'GLTF_SEPARATE'),
             'export_copyright': self.export_config.get('export_copyright', ''),
-            'gltf_export_id': self.export_config.get('export_copyright', ''),
+            'gltf_export_id': self.export_config.get('gltf_export_id', ''),
             'collection': self.export_config.get('collection', ''),
             'export_image_format': self.export_config.get('export_image_format', 'AUTO'),
-            'export_texture_dir': self.export_config.get('export_texture_dir', ''),
             'export_vertex_color': self.export_config.get('export_vertex_color', 'MATERIAL'),
             'export_materials': self.export_config.get('export_materials', 'EXPORT'),
             'export_animation_mode': self.export_config.get('export_animation_mode', 'ACTIONS'),
             'export_negative_frame': self.export_config.get('export_negative_frame', 'SLIDE'),
-            'export_nla_strips_merged_animation_name': self.export_config.get('export_nla_strips_merged_animation_name', 'Animation'),
-            'export_import_convert_lighting_mode': self.export_config.get('export_import_convert_lighting_mode', 'SPEC'),
+            'export_import_convert_lighting_mode': self.export_config.get('export_import_convert_lighting_mode', 'COMPAT'),
             'export_gltfpack_vpi': self.export_config.get('export_gltfpack_vpi', 'Integer'),
             'filter_glob': self.export_config.get('filter_glob', '*.glb;*.gltf'),
 
@@ -297,13 +268,7 @@ class BlenderExporter:
             'export_jpeg_quality': int(self.export_config.get('export_jpeg_quality', 75)),
             'export_image_quality': int(self.export_config.get('export_image_quality', 75)),
             'export_frame_step': int(self.export_config.get('export_frame_step', 1)),
-            'export_influence_nb': int(self.export_config.get('export_influence_nb', 4)),
-            'export_draco_mesh_compression_level': int(self.export_config.get('export_draco_mesh_compression_level', 6)),
-            'export_draco_position_quantization': int(self.export_config.get('export_draco_position_quantization', 14)),
-            'export_draco_normal_quantization': int(self.export_config.get('export_draco_normal_quantization', 10)),
-            'export_draco_texcoord_quantization': int(self.export_config.get('export_draco_texcoord_quantization', 12)),
-            'export_draco_color_quantization': int(self.export_config.get('export_draco_color_quantization', 10)),
-            'export_draco_generic_quantization': int(self.export_config.get('export_draco_generic_quantization', 12))
+            'export_influence_nb': int(self.export_config.get('export_influence_nb', 4))
         }
 
         # ブール値パラメータの追加
@@ -365,13 +330,6 @@ class BlenderExporter:
     def process_files(self):
         """設定ファイルで指定された全ファイルを処理"""
         print("\n=== ファイル処理開始 ===")
-        if not isinstance(self.ftp_settings, dict):
-            print("警告: FTP設定が辞書ではありません。辞書として初期化します。")
-            self.ftp_settings = {'remote_directory': self.ftp_settings if isinstance(self.ftp_settings, str) else '/'}
-
-        print("ftp_settings の型:", type(self.ftp_settings))
-        print("ftp_settings の内容:", self.ftp_settings)
-
         if not self.blend_files:
             print("処理対象ファイルが指定されていません")
             return
@@ -383,12 +341,19 @@ class BlenderExporter:
             print("file_info の型:", type(file_info))
             print("file_info の内容:", file_info)
 
+            # 現在のファイル名設定を保存
+            original_filename = self.export_config.get('filename')
+
             blend_file = None
             try:
                 if isinstance(file_info, dict):
                     file_path = file_info.get('file_path')
                     output_name = file_info.get('output_name')
                     remote_path = file_info.get('remote_path')
+
+                    print(f"出力ファイル名設定:")
+                    print(f"  - 指定された出力ファイル名: {output_name}")
+                    print(f"  - 設定前のfilename: {self.export_config.get('filename', 'Not Set')}")
 
                     if not file_path:
                         print("エラー: file_pathが指定されていないファイルがあります")
@@ -400,19 +365,16 @@ class BlenderExporter:
                     # Blenderファイルを開く
                     bpy.ops.wm.open_mainfile(filepath=str(blend_file))
 
-                    # 出力ファイル名を一時的に変更
-                    original_filename = self.export_config.get('filename')
+                    # 出力ファイル名を設定（個別設定が優先）
                     if output_name:
                         self.export_config['filename'] = output_name
+                        print(f"  - 設定後のfilename: {self.export_config['filename']}")
 
-                    # エクスポート実行
-                    self.export_gltf()
+                    # エクスポートとアップロード処理
+                    exported_file = self.export_gltf()
+                    print(f"  - エクスポートされたファイル: {exported_file}")
 
-                    # 出力ファイル名を元に戻す
-                    if output_name:
-                        self.export_config['filename'] = original_filename
-
-                    # リモートパスの一時変更とアップロード
+                    # アップロード処理（変更なし）
                     original_remote_dir = None
                     if remote_path and 'remote_directory' in self.ftp_settings:
                         original_remote_dir = self.ftp_settings['remote_directory']
@@ -421,14 +383,20 @@ class BlenderExporter:
                     try:
                         self.upload_to_ftp()
                     finally:
+                        # 設定を元に戻す
                         if original_remote_dir is not None:
                             self.ftp_settings['remote_directory'] = original_remote_dir
-
-                    print(f"処理完了: {blend_file.name}")
+                        if original_filename is not None:
+                            self.export_config['filename'] = original_filename
 
             except Exception as e:
                 file_name = blend_file.name if blend_file else "不明なファイル"
                 print(f"エラー ({file_name}): {str(e)}")
+
+            finally:
+                # 必ず元の設定に戻す
+                if original_filename is not None:
+                    self.export_config['filename'] = original_filename
 
 def get_args():
     """コマンドライン引数を解析"""
@@ -477,6 +445,10 @@ def main():
 
         print("すべての処理が完了しました")
 
+        # 自動終了が無効の場合は入力待ち
+        if not auto_close:
+            input("Enterキーを押して終了してください...")
+
         # 正常終了時の処理
         if auto_close:
             import sys
@@ -486,6 +458,8 @@ def main():
         print(f"エラーが発生しました: {str(e)}")
         input("Enterキーを押して終了してください...")  # エラー時は必ず待機
         sys.exit(1)  # エラー終了コード
+
+    sys.exit(0)  # 正常終了
 
 if __name__ == "__main__":
     main()

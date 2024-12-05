@@ -132,17 +132,6 @@ blender -b your_file.blend --python blender_export.py -- --config custom_config.
 | `export_image_webp_fallback` | WebPのフォールバックとしてPNGを作成       | `false`      |
 | `export_keep_originals`      | オリジナルテクスチャを保持                | `false`      |
 
-### Compression (Draco)
-| パラメータ                             | 説明                  | デフォルト値 |
-| -------------------------------------- | --------------------- | ------------ |
-| `export_draco_mesh_compression_enable` | Draco圧縮を使用       | `false`      |
-| `export_draco_mesh_compression_level`  | 圧縮レベル (0-10)     | `6`          |
-| `export_draco_position_quantization`   | 位置の量子化 (0-30)   | `14`         |
-| `export_draco_normal_quantization`     | 法線の量子化 (0-30)   | `10`         |
-| `export_draco_texcoord_quantization`   | UV座標の量子化 (0-30) | `12`         |
-| `export_draco_color_quantization`      | カラーの量子化 (0-30) | `10`         |
-| `export_draco_generic_quantization`    | その他の量子化 (0-30) | `12`         |
-
 ### Animation設定
 | パラメータ              | 説明                                                                         | デフォルト値 |
 | ----------------------- | ---------------------------------------------------------------------------- | ------------ |
