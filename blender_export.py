@@ -152,6 +152,8 @@ class BlenderExporter:
         yaml_parser = SimpleYAMLParser()
         self.config = yaml_parser.parse_file(config_path)
 
+        self.execution_settings = self.config.get('execution_settings', {})
+
         # 確実に辞書として初期化
         self.export_config = self.config.get('export_settings', {})
 
@@ -463,6 +465,7 @@ def main():
         print("エクスポート処理を開始します...")
 
         exporter = BlenderExporter(config_path=config_path, output_filename=output_filename)
+        auto_close = exporter.execution_settings.get('close_after_complete', False)
 
         # 複数ファイル処理の実行
         if exporter.blend_files:
@@ -474,8 +477,15 @@ def main():
 
         print("すべての処理が完了しました")
 
+        # 正常終了時の処理
+        if auto_close:
+            import sys
+            sys.exit(0)  # 正常終了コード
+
     except Exception as e:
         print(f"エラーが発生しました: {str(e)}")
+        input("Enterキーを押して終了してください...")  # エラー時は必ず待機
+        sys.exit(1)  # エラー終了コード
 
 if __name__ == "__main__":
     main()

@@ -1,3 +1,7 @@
+# 実行設定
+execution_settings:
+  close_after_complete: true  # 正常終了時に自動でウィンドウを閉じる
+
 # Blender GLTF/GLBエクスポート設定
 export_settings:
   # 基本設定 ====================================================================
