@@ -20,7 +20,6 @@ class SimpleYAMLParser:
         if value_lower == 'false':
             return False
 
-        # 数値への変換を試みる
         try:
             if '.' in str(value_str):
                 return float(value_str)
@@ -31,101 +30,81 @@ class SimpleYAMLParser:
 
         # 文字列の処理
         if isinstance(value_str, str):
-            # クォートの除去
-            if value_str.startswith('"') and value_str.endswith('"'):
-                return value_str[1:-1]
-            if value_str.startswith("'") and value_str.endswith("'"):
-                return value_str[1:-1]
-            return value_str.strip()
+            value = value_str.strip()
+            if value.startswith('"') and value.endswith('"'):
+                return value[1:-1]
+            if value.startswith("'") and value.endswith("'"):
+                return value[1:-1]
+            return value
 
         return value_str
 
     def parse_file(self, file_path):
         """YAMLファイルをパース"""
         print("\n=== YAMLパース処理開始 ===")
-        self.data = {}
-        indent_stack = [(0, self.data)]
-        current_dict = self.data
-        current_list_item = None
-        last_indent = 0
+        print(f"YAMLファイルを読み込み: {file_path}")
 
         with open(file_path, 'r', encoding='utf-8') as f:
-            for line_num, line in enumerate(f, 1):
-                try:
-                    # コメントと空行をスキップ
-                    line = line.rstrip()
-                    if not line or line.strip().startswith('#'):
-                        continue
+            content = f.read()
+            # print("読み込んだYAMLの内容:")
+            # print(content)
 
-                    # インデントを計算
-                    indent = len(line) - len(line.lstrip())
-                    line = line.lstrip()
+        self.data = {}
+        current_dict = self.data
+        current_section = None
+        section_stack = []
 
-                    # リストアイテムの処理
-                    if line.startswith('-'):
-                        line = line[1:].strip()
-                        parent_dict = indent_stack[-1][1]
-                        last_key = list(parent_dict.keys())[-1] if parent_dict else None
+        with open(file_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.rstrip()
+                if not line or line.strip().startswith('#'):
+                    continue
 
-                        if ':' in line:
-                            key, value = line.split(':', 1)
-                            key = key.strip()
-                            value = value.strip()
+                indent = len(line) - len(line.lstrip())
+                line = line.lstrip()
 
-                            # 新しいリストアイテムを作成
-                            current_list_item = {}
-                            if value:
-                                current_list_item[key] = self.parse_value(value)
+                # セクションの開始
+                if ':' in line and not line.split(':', 1)[1].strip():
+                    key = line.split(':', 1)[0].strip()
 
-                            # 親リストに追加
-                            if last_key and isinstance(parent_dict[last_key], list):
-                                parent_dict[last_key].append(current_list_item)
+                    # インデントに基づいて適切な親を選択
+                    while section_stack and section_stack[-1][1] >= indent:
+                        section_stack.pop()
 
-                            # インデントスタックを更新
-                            indent_stack.append((indent, current_list_item))
+                    if section_stack:
+                        parent_dict = section_stack[-1][0]
+                    else:
+                        parent_dict = self.data
 
-                    # キー・バリューペアの処理
-                    elif ':' in line:
-                        key, value = line.split(':', 1)
-                        key = key.strip()
-                        value = value.strip()
+                    if key == 'blend_files':
+                        parent_dict[key] = []
+                        current_dict = parent_dict[key]
+                    else:
+                        parent_dict[key] = {}
+                        current_dict = parent_dict[key]
 
-                        # インデントに基づいて適切な親を選択
-                        while len(indent_stack) > 1 and indent <= indent_stack[-1][0]:
-                            indent_stack.pop()
-                            current_list_item = None
+                    section_stack.append((current_dict, indent))
+                    continue
 
-                        current_dict = indent_stack[-1][1]
+                # リストアイテム
+                if line.startswith('-'):
+                    if isinstance(current_dict, list):
+                        current_dict.append({})
+                        current_dict = current_dict[-1]
+                    line = line[1:].strip()
 
-                        # 値の処理
-                        if not value:
-                            # リストまたは新しいセクションの開始
-                            if key == 'blend_files':
-                                current_dict[key] = []
-                            else:
-                                new_dict = {}
-                                current_dict[key] = new_dict
-                                current_dict = new_dict
-                                indent_stack.append((indent, current_dict))
-                        else:
-                            # リストアイテムに属する値
-                            if current_list_item is not None and indent > last_indent:
-                                current_list_item[key] = self.parse_value(value)
-                            else:
-                                current_dict[key] = self.parse_value(value)
+                # キー・バリューペア
+                if ':' in line:
+                    key, value = line.split(':', 1)
+                    key = key.strip()
+                    value = value.strip()
 
-                    last_indent = indent
+                    if isinstance(current_dict, dict):
+                        current_dict[key] = self.parse_value(value)
 
-                except Exception as e:
-                    print(f"エラー (行 {line_num}): {str(e)}")
-                    print(f"現在の状態:")
-                    print(f"  行: {line}")
-                    print(f"  インデント: {indent}")
-                    print(f"  current_dict: {current_dict}")
-                    print(f"  current_list_item: {current_list_item}")
-                    print(f"  indent_stack: {indent_stack}")
-                    raise
-
+            print("\nパース結果:")
+            print(f"blend_files: {self.data.get('blend_files', [])}")
+            print(f"ftp_settings: {self.data.get('ftp_settings', {})}")
             return self.data
 
 class BlenderExporter:
@@ -137,7 +116,7 @@ class BlenderExporter:
         self.execution_settings = self.config.get('execution_settings', {})
         self.export_config = self.config.get('export_settings', {})
 
-        # FTP設定の初期化
+        # FTP設定の初期化を修正
         ftp_settings = self.config.get('ftp_settings', {})
         self.ftp_settings = {
             'host': ftp_settings.get('host', ''),
@@ -147,16 +126,14 @@ class BlenderExporter:
             'remote_directory': ftp_settings.get('remote_directory', '/')
         }
 
+        print("\nFTP設定確認:")  # デバッグ用
+        print(f"  host: {self.ftp_settings['host']}")
+        print(f"  port: {self.ftp_settings['port']}")
+        print(f"  username: {self.ftp_settings['username']}")
+        print(f"  remote_directory: {self.ftp_settings['remote_directory']}")
+
         self.output_dir = Path(str(self.config.get('output_directory', './output')))
         self.blend_files = self.config.get('blend_files', [])
-
-        # print("\n=== 設定読み込み結果 ===")
-        # print(f"blend_files: {self.blend_files}")
-        # print(f"export_config: {self.export_config}")
-        # print(f"ftp_settings: {self.ftp_settings}")  # FTP設定の確認を追加
-
-        if output_filename:
-            self.export_config['filename'] = output_filename
 
     def convert_bool(self, value):
         """ブール値への変換"""
@@ -300,19 +277,24 @@ class BlenderExporter:
                 raise ValueError("FTPパスワードが設定されていません")
 
             ftp = ftplib.FTP()
+            print(f"FTPサーバーに接続: {self.ftp_settings['host']}:{self.ftp_settings['port']}")
+
             ftp.connect(
                 host=self.ftp_settings['host'],
-                port=self.ftp_settings.get('port', 21)
+                port=self.ftp_settings['port']
             )
+
+            print(f"FTPログイン: {self.ftp_settings['username']}")
             ftp.login(
                 user=self.ftp_settings['username'],
                 passwd=self.ftp_settings['password']
             )
 
-            remote_dir = self.ftp_settings.get('remote_directory', '/')
+            remote_dir = self.ftp_settings['remote_directory']
             print(f"リモートディレクトリに移動: {remote_dir}")
             ftp.cwd(remote_dir)
 
+            # 出力ファイルのアップロード
             for file_path in self.output_dir.glob('*'):
                 if file_path.is_file():
                     with open(file_path, 'rb') as file:
@@ -323,6 +305,9 @@ class BlenderExporter:
             ftp.quit()
             print("FTPアップロード処理が正常に完了しました")
 
+        except ftplib.all_errors as e:
+            print(f"FTPアップロードエラー: {str(e)}")
+            raise
         except Exception as e:
             print(f"FTPアップロードエラー: {str(e)}")
             raise
@@ -336,54 +321,49 @@ class BlenderExporter:
 
         print(f"処理対象ファイル数: {len(self.blend_files)}")
 
-        for file_info in self.blend_files:
-            print("\n=== ファイル処理デバッグ情報 ===")
-            print("file_info の型:", type(file_info))
-            print("file_info の内容:", file_info)
+        for index, file_info in enumerate(self.blend_files, 1):
+            print(f"\n=== ファイル {index}/{len(self.blend_files)} の処理開始 ===")
+            print(f"処理対象: {file_info}")
 
-            # 現在のファイル名設定を保存
             original_filename = self.export_config.get('filename')
-
             blend_file = None
+
             try:
                 if isinstance(file_info, dict):
                     file_path = file_info.get('file_path')
                     output_name = file_info.get('output_name')
                     remote_path = file_info.get('remote_path')
 
-                    print(f"出力ファイル名設定:")
-                    print(f"  - 指定された出力ファイル名: {output_name}")
-                    print(f"  - 設定前のfilename: {self.export_config.get('filename', 'Not Set')}")
-
                     if not file_path:
-                        print("エラー: file_pathが指定されていないファイルがあります")
+                        print(f"エラー: file_pathが指定されていません（ファイル {index}）")
                         continue
 
                     blend_file = Path(file_path)
-                    print(f"\n処理開始: {blend_file.name}")
+                    if not blend_file.exists():
+                        print(f"エラー: ファイルが存在しません: {blend_file}")
+                        continue
 
-                    # Blenderファイルを開く
+                    print(f"ファイル読み込み開始: {blend_file}")
                     bpy.ops.wm.open_mainfile(filepath=str(blend_file))
+                    print(f"ファイル読み込み完了: {blend_file}")
 
-                    # 出力ファイル名を設定（個別設定が優先）
                     if output_name:
                         self.export_config['filename'] = output_name
-                        print(f"  - 設定後のfilename: {self.export_config['filename']}")
+                        print(f"出力ファイル名を設定: {output_name}")
 
-                    # エクスポートとアップロード処理
                     exported_file = self.export_gltf()
-                    print(f"  - エクスポートされたファイル: {exported_file}")
+                    print(f"エクスポート完了: {exported_file}")
 
-                    # アップロード処理（変更なし）
                     original_remote_dir = None
                     if remote_path and 'remote_directory' in self.ftp_settings:
                         original_remote_dir = self.ftp_settings['remote_directory']
                         self.ftp_settings['remote_directory'] = remote_path
+                        print(f"リモートディレクトリを変更: {remote_path}")
 
                     try:
                         self.upload_to_ftp()
+                        print(f"アップロード完了: {blend_file.name}")
                     finally:
-                        # 設定を元に戻す
                         if original_remote_dir is not None:
                             self.ftp_settings['remote_directory'] = original_remote_dir
                         if original_filename is not None:
@@ -391,12 +371,17 @@ class BlenderExporter:
 
             except Exception as e:
                 file_name = blend_file.name if blend_file else "不明なファイル"
-                print(f"エラー ({file_name}): {str(e)}")
+                print(f"エラー発生 ({file_name}): {str(e)}")
+                print("スタックトレース:")
+                import traceback
+                traceback.print_exc()
 
             finally:
-                # 必ず元の設定に戻す
                 if original_filename is not None:
                     self.export_config['filename'] = original_filename
+                print(f"=== ファイル {index}/{len(self.blend_files)} の処理完了 ===\n")
+
+        print("全ファイルの処理が完了しました")
 
 def get_args():
     """コマンドライン引数を解析"""
