@@ -15,50 +15,68 @@ BlenderのGLTF/GLBエクスポート機能をコンソールから実行し、FT
 ## インストール方法
 
 ### 1. ファイルの配置
-以下の2つのファイルを用意します：
+以下の4つのファイルを用意します：
 - `blender_export.py`（エクスポートスクリプト）
 - `config.yaml`（設定ファイル）
+- `export.bat`（Windowsでの実行ファイル）
+- `export.bash`（Mac/Linuxでの実行ファイル）
 
-#### 配置方法（3つの選択肢）
+#### 配置方法
 
-1. **プロジェクトフォルダに配置（推奨）**
+1. **プロジェクトフォルダに配置**
    ```
    your_project/
    ├── your_file.blend
    ├── blender_export.py
-   └── config.yaml
+   ├── config.yaml
+   ├── export.bat
+   └── export.bash
    ```
    - Blenderファイルと同じフォルダに配置するだけで使えます
    - プロジェクトごとに設定を変えられる利点があります
 
-2. **Blenderのスクリプトフォルダに配置**
-   - Windows: `C:\Users\[ユーザー名]\AppData\Roaming\Blender Foundation\Blender\[バージョン]\scripts\startup`
-   - Mac: `/Users/[ユーザー名]/Library/Application Support/Blender/[バージョン]/scripts/startup`
-   - Linux: `/home/[ユーザー名]/.config/blender/[バージョン]/scripts/startup`
+## 実行方法
 
-3. **カスタムフォルダに配置**
-   ```
-   C:\BlenderScripts\  # 例：任意の場所に専用フォルダを作成
-   ├── blender_export.py
-   └── config.yaml
+### Windowsでの実行
+1. Blenderの環境パスが通っていない場合は、`export.bat`をテキストエディタで開き、Blenderのexeファイルへのパスを設定
+   ```batch
+   @echo off
+   REM Blenderのパスを設定（必要な場合のみ）
+   set BLENDER_PATH="C:\Program Files\Blender Foundation\Blender 4.2\blender.exe"
    ```
 
-## 使用方法
+2. 実行方法：
+   - `export.bat`をダブルクリックで実行
+   - または、エクスプローラーのアドレスバーに`cmd`と入力してコマンドプロンプトを開き、`export.bat`を実行
 
-### コマンドライン
-```bash
-# 基本的な使用方法
-blender -b your_file.blend --python blender_export.py
+### Mac/Linuxでの実行
+1. Blenderの環境パスが通っていない場合は、`export.bash`をテキストエディタで開き、Blenderのパスを設定
+   ```bash
+   #!/bin/bash
+   # Blenderのパスを設定（必要な場合のみ）
+   BLENDER_PATH="/Applications/Blender.app/Contents/MacOS/Blender"
+   ```
 
-# 出力ファイル名を指定
-blender -b your_file.blend --python blender_export.py -- --output model.gltf
+2. ターミナルで実行権限を付与
+   ```bash
+   chmod +x export.bash
+   ```
 
-# 設定ファイルを指定
-blender -b your_file.blend --python blender_export.py -- --config custom_config.yaml
+3. 実行方法：
+   - `export.bash`をダブルクリックで実行
+   - または、ターミナルで`./export.bash`を実行
 
-# 両方を指定
-blender -b your_file.blend --python blender_export.py -- --config custom_config.yaml --output model.gltf
-```
+### Blenderのパス設定例
+- Windows:
+  ```
+  "C:\Program Files\Blender Foundation\Blender 4.2\blender.exe"
+  "C:\Program Files (x86)\Steam\steamapps\common\Blender\blender.exe"
+  ```
+- Mac:
+  ```
+  "/Applications/Blender.app/Contents/MacOS/Blender"
+  "~/Library/Application Support/Steam/steamapps/common/Blender/blender.app/Contents/MacOS/blender"
+  ```
 
 ## 設定ファイル（config.yaml）
 
@@ -194,6 +212,7 @@ blender -b your_file.blend --python blender_export.py -- --config custom_config.
 - WebPエクスポートを使用する場合、既にWebP形式のテクスチャに対しては何も行われません
 - 複数ファイルを処理する場合、各ファイルの設定は`blend_files`セクションで個別に指定できます
 - 処理対象ファイルリストで個別のアップロード先を指定しなかった場合はアップロード先のリモートディレクトリがデフォルト値として使用されます
+- アクションフィルターは現在4.3.2において問題が発生するようなので、項目から除外しています
 
 ## トラブルシューティング
 
