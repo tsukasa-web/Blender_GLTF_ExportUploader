@@ -272,6 +272,27 @@ class BlenderExporter:
             print(f"エクスポートエラー: {str(e)}")
             raise
 
+    def create_ftp_directory(self, ftp, path):
+        """FTPサーバー上にディレクトリを再帰的に作成"""
+        dirs = path.split('/')
+        current = ''
+
+        for d in dirs:
+            if not d:  # パスが/で始まる場合や連続する/がある場合をスキップ
+                continue
+            current = current + '/' + d
+            try:
+                ftp.cwd(current)
+            except ftplib.error_perm:
+                try:
+                    print(f"ディレクトリを作成: {current}")
+                    ftp.mkd(current)
+                    ftp.cwd(current)
+                except ftplib.error_perm as e:
+                    print(f"ディレクトリの作成に失敗: {current}")
+                    print(f"エラー: {str(e)}")
+                    raise
+
     def upload_to_ftp(self):
         """FTPアップロード処理"""
         try:
@@ -301,9 +322,16 @@ class BlenderExporter:
 
             remote_dir = self.ftp_settings['remote_directory']
             print(f"リモートディレクトリに移動: {remote_dir}")
-            ftp.cwd(remote_dir)
 
-            # 出力ファイルのアップロード
+            # リモートディレクトリの作成を試みる
+            try:
+                self.create_ftp_directory(ftp, remote_dir)
+            except ftplib.error_perm as e:
+                print(f"警告: ディレクトリの作成に失敗しました: {str(e)}")
+                # ここでエラーを再度発生させるか処理を継続するかを選択できます
+                raise
+
+            # アップロード処理
             for file_path in self.output_dir.glob('*'):
                 if file_path.is_file():
                     with open(file_path, 'rb') as file:
