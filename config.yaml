@@ -23,6 +23,8 @@ export_settings:
 
   # ソースコレクション (default: "")
   collection: ""
+  # Scene名を指定（空文字の場合はアクティブシーン）
+  scene_name: ""
   # コレクションの中心でエクスポート (default: false)
   at_collection_center: false
   # エクスポート設定を保存 (default: false)

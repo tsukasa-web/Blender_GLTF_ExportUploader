@@ -116,6 +116,15 @@ class BlenderExporter:
         self.execution_settings = self.config.get('execution_settings', {})
         self.export_config = self.config.get('export_settings', {})
 
+        # シーン指定の処理を追加
+        scene_name = self.export_config.get('scene_name', '')
+        if scene_name:
+            if scene_name in bpy.data.scenes:
+                bpy.context.window.scene = bpy.data.scenes[scene_name]
+                print(f"シーンを変更: {scene_name}")
+            else:
+                print(f"警告: 指定されたシーン '{scene_name}' が見つかりません")
+
         # FTP設定の初期化を修正
         ftp_settings = self.config.get('ftp_settings', {})
         self.ftp_settings = {

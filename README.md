@@ -93,6 +93,7 @@ BlenderのGLTF/GLBエクスポート機能をコンソールから実行し、FT
 | パラメータ             | 説明                             | デフォルト値     |
 | ---------------------- | -------------------------------- | ---------------- |
 | `collection`           | ソースコレクション               | `""`             |
+| `scene_name`           | Sceneを指定                    | `""`             |
 | `at_collection_center` | コレクションの中心でエクスポート | `false`          |
 | `will_save_settings`   | エクスポート設定を保存           | `false`          |
 | `filter_glob`          | フィルターグロブ                 | `"*.glb;*.gltf"` |
