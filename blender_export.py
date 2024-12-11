@@ -512,21 +512,33 @@ def main():
 
         print("すべての処理が完了しました")
 
-        # 自動終了が無効の場合は入力待ち
-        if not auto_close:
-            input("Enterキーを押して終了してください...")
-
-        # 正常終了時の処理
-        if auto_close:
-            import sys
-            sys.exit(0)  # 正常終了コード
+        # プラットフォーム固有の終了処理
+        import platform
+        if platform.system() == 'Darwin':  # Mac
+            if auto_close:
+                try:
+                    with open(".close_after_complete", "w") as f:
+                        f.write("1")
+                except Exception as e:
+                    print(f"一時ファイルの作成に失敗しました: {str(e)}")
+        else:  # Windows その他
+            if auto_close:
+                try:
+                    with open(".close_after_complete", "w") as f:
+                        f.write("1")
+                except Exception as e:
+                    print(f"一時ファイルの作成に失敗しました: {str(e)}")
+                input("Enterキーを押して終了してください...")
+            else:
+                input("Enterキーを押して終了してください...")
 
     except Exception as e:
         print(f"エラーが発生しました: {str(e)}")
-        input("Enterキーを押して終了してください...")  # エラー時は必ず待機
-        sys.exit(1)  # エラー終了コード
+        if platform.system() != 'Darwin':  # Mac以外
+            input("Enterキーを押して終了してください...")
+        sys.exit(1)
 
-    sys.exit(0)  # 正常終了
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()

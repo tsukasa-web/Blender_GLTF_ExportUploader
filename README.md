@@ -9,7 +9,7 @@ BlenderのGLTF/GLBエクスポート機能をコンソールから実行し、FT
 - エクスポートしたファイルの自動FTPアップロード
 
 ## 必要環境
-- Blender 4.2.3以上
+- Blender 4.2.3（4.2.3の書き出しオプションがベースになっています。ご使用されるバージョンで大きく変わっている場合は動作しない可能性があります）
 - Python 3.x （Blenderに同梱のもので動作）
 
 ## インストール方法
@@ -37,46 +37,59 @@ BlenderのGLTF/GLBエクスポート機能をコンソールから実行し、FT
 
 ## 実行方法
 
-### Windowsでの実行
-1. Blenderの環境パスが通っていない場合は、`export.bat`をテキストエディタで開き、Blenderのexeファイルへのパスを設定
-   ```batch
-   @echo off
-   REM Blenderのパスを設定（必要な場合のみ）
-   set BLENDER_PATH="C:\Program Files\Blender Foundation\Blender 4.2\blender.exe"
-   ```
+### Windowsでの実行方法
 
-2. 実行方法：
-   - `export.bat`をダブルクリックで実行
-   - または、エクスプローラーのアドレスバーに`cmd`と入力してコマンドプロンプトを開き、`export.bat`を実行
+#### Blenderのパス
+以下の順序で自動的にBlenderを検索します：
 
-### Mac/Linuxでの実行
-1. Blenderの環境パスが通っていない場合は、`export.bash`をテキストエディタで開き、Blenderのパスを設定
-   ```bash
-   #!/bin/bash
-   # Blenderのパスを設定（必要な場合のみ）
-   BLENDER_PATH="/Applications/Blender.app/Contents/MacOS/Blender"
-   ```
+1. システムの環境変数に登録されているBlender
+2. 通常のインストール先
+   - `C:\Program Files\Blender Foundation\Blender 4.3\blender.exe`
+3. Steam版のインストール先
+   - `C:\Program Files (x86)\Steam\steamapps\common\Blender\blender.exe`
 
-2. ターミナルで実行権限を付与
-   ```bash
-   chmod +x export.bash
-   ```
+#### カスタムパスの設定
+上記以外の場所にBlenderをインストールしている場合：
 
-3. 実行方法：
-   - `export.bash`をダブルクリックで実行
-   - または、ターミナルで`./export.bash`を実行
+1. `export.bat`をテキストエディタで開く
+2. `BLENDER_PATHS`の設定を編集
+```batch
+set BLENDER_PATHS[0]="カスタムパス\blender.exe"
+```
 
-### Blenderのパス設定例
-- Windows:
-  ```
-  "C:\Program Files\Blender Foundation\Blender 4.2\blender.exe"
-  "C:\Program Files (x86)\Steam\steamapps\common\Blender\blender.exe"
-  ```
-- Mac:
-  ```
-  "/Applications/Blender.app/Contents/MacOS/Blender"
-  "~/Library/Application Support/Steam/steamapps/common/Blender/blender.app/Contents/MacOS/blender"
-  ```
+#### 実行方法
+1. `export.bat`をダブルクリックで実行
+2. 処理が完了するまで待機
+3. エラーが発生した場合はメッセージを確認
+
+#### トラブルシューティング
+- Blenderが見つからない場合、インストール先のパスを確認してください
+- Blenderのバージョンが上がった場合、各種パスのバージョンを変更してください
+- Steam版を使用している場合、Steamが正常にインストールされていることを確認してください
+- カスタムパスを使用する場合、パスに日本語やスペースが含まれていないことを確認してください
+
+### Macでの実行方法
+
+#### 方法1: export.commandを使用（推奨）
+1. `export.command`ファイルをダブルクリックで実行
+   - 初回実行時にセキュリティ警告が表示された場合：
+     1. システム環境設定 > セキュリティとプライバシー を開く
+     2. 「このまま開く」をクリック
+   - 以降は警告なしで実行可能
+
+#### 方法2: ターミナルから実行
+従来の方法として、ターミナルから実行することも可能です：
+```bash
+chmod +x export.bash
+./export.bash
+```
+
+### Blenderのパス設定
+デフォルトでは以下の場所を自動的に検索します：
+- 通常版Blender: `/Applications/Blender.app`
+- Steam版Blender: `~/Library/Application Support/Steam/steamapps/common/Blender`
+
+別の場所にBlenderをインストールしている場合は、`export.command`をテキストエディタで開き、`BLENDER_PATH`を適切なパスに変更してください。
 
 ## 設定ファイル（config.yaml）
 

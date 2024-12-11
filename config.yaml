@@ -73,7 +73,8 @@ export_settings:
   export_gpu_instances: false
   # オブジェクト階層を平坦化 (default: false)
   export_hierarchy_flatten_objs: false
-  export_hierarchy_full_collections: false  # 完全なコレクション階層をエクスポート (default: false)
+  # 完全なコレクション階層をエクスポート (default: false)
+  export_hierarchy_full_collections: false
 
   # Mesh設定 ---------------------------------------------------------------
 
@@ -277,7 +278,8 @@ export_settings:
 
 # 出力設定 ================================================================
 
-output_directory: "./output"  # 出力ディレクトリ (default: "./output")
+# 出力ディレクトリ (default: "./output")
+output_directory: "./output"
 
 # FTP設定 ================================================================
 
