@@ -35,60 +35,91 @@ BlenderのGLTF/GLBエクスポート機能をコンソールから実行し、FT
    - Blenderファイルと同じフォルダに配置するだけで使えます
    - プロジェクトごとに設定を変えられる利点があります
 
-## 実行方法
+## 動作環境と実行方法
 
-### Windowsでの実行方法
+### Windows環境での実行
 
-#### Blenderのパス
-以下の順序で自動的にBlenderを検索します：
-
-1. システムの環境変数に登録されているBlender
-2. 通常のインストール先
-   - `C:\Program Files\Blender Foundation\Blender 4.3\blender.exe`
-3. Steam版のインストール先
-   - `C:\Program Files (x86)\Steam\steamapps\common\Blender\blender.exe`
-
-#### カスタムパスの設定
-上記以外の場所にBlenderをインストールしている場合：
-
-1. `export.bat`をテキストエディタで開く
-2. `BLENDER_PATHS`の設定を編集
-```batch
-set BLENDER_PATHS[0]="カスタムパス\blender.exe"
-```
+#### デフォルトパス
+以下のパスを自動的に検索します：
+1. 環境変数に登録されているBlender
+2. Steam版Blender: `C:\Program Files (x86)\Steam\steamapps\common\Blender\blender.exe`
+3. 通常版Blender: `C:\Program Files\Blender Foundation\Blender 4.2\blender.exe`
 
 #### 実行方法
 1. `export.bat`をダブルクリックで実行
-2. 処理が完了するまで待機
-3. エラーが発生した場合はメッセージを確認
+2. 処理が完了またはエラーが発生するまでコンソールウィンドウが表示されます
+3. エラーが発生した場合は、エラーメッセージを確認してEnterキーを押して終了
 
-#### トラブルシューティング
-- Blenderが見つからない場合、インストール先のパスを確認してください
-- Blenderのバージョンが上がった場合、各種パスのバージョンを変更してください
-- Steam版を使用している場合、Steamが正常にインストールされていることを確認してください
-- カスタムパスを使用する場合、パスに日本語やスペースが含まれていないことを確認してください
-
-### Macでの実行方法
-
-#### 方法1: export.commandを使用（推奨）
-1. `export.command`ファイルをダブルクリックで実行
-   - 初回実行時にセキュリティ警告が表示された場合：
-     1. システム環境設定 > セキュリティとプライバシー を開く
-     2. 「このまま開く」をクリック
-   - 以降は警告なしで実行可能
-
-#### 方法2: ターミナルから実行
-従来の方法として、ターミナルから実行することも可能です：
-```bash
-chmod +x export.bash
-./export.bash
+#### Blenderのパスを変更する場合
+`export.bat`をテキストエディタで開き、以下の行を編集：
+```batch
+set STEAM_PATH="C:\Program Files (x86)\Steam\steamapps\common\Blender\blender.exe"
+set DEFAULT_PATH="C:\Program Files\Blender Foundation\Blender 4.2\blender.exe"
 ```
 
-### Blenderのパス設定
-デフォルトでは以下の場所を自動的に検索します：
-- 通常版Blender: `/Applications/Blender.app`
-- Steam版Blender: `~/Library/Application Support/Steam/steamapps/common/Blender`
+### Mac環境での実行
 
+#### デフォルトパス
+以下のパスを自動的に検索します：
+1. 通常版Blender: `/Applications/Blender.app`
+2. Steam版Blender: `~/Library/Application Support/Steam/steamapps/common/Blender/blender.app`
+
+#### 実行方法
+1. `export.command`をダブルクリックで実行
+2. 初回実行時のみ、以下の手順が必要：
+   1. ターミナルで実行権限を付与
+   ```bash
+   chmod +x export.command
+   ```
+   2. セキュリティ設定の変更
+      - 「システム環境設定」→「セキュリティとプライバシー」で許可
+3. 処理が完了またはエラーが発生するまでターミナルウィンドウが表示されます
+4. エラーが発生した場合は、エラーメッセージを確認して終了
+
+#### Blenderのパスを変更する場合
+`export.command`をテキストエディタで開き、以下の行を編集：
+```bash
+BLENDER_PATH="/Applications/Blender.app/Contents/MacOS/Blender"
+STEAM_BLENDER_PATH="$HOME/Library/Application Support/Steam/steamapps/common/Blender/blender.app/Contents/MacOS/blender"
+```
+
+### 自動終了設定
+
+`config.yaml`の`execution_settings`セクションで自動終了の設定が可能：
+```yaml
+execution_settings:
+  # 正常終了時に自動でウィンドウを閉じる
+  close_after_complete: true  # または false
+```
+
+- `true`: 処理完了後、自動的にウィンドウが閉じます
+- `false`: 処理完了後、キー入力待ちになります
+
+### トラブルシューティング
+
+#### Windows環境
+1. **「Blenderが見つかりません」というエラー**
+   - Blenderが正しくインストールされているか確認
+   - パスが正しく設定されているか確認
+   - Steam版を使用している場合、Steamが正常にインストールされているか確認
+
+2. **コンソールがすぐに閉じる**
+   - `config.yaml`の`close_after_complete`の設定を確認
+   - エラーログを確認するには`close_after_complete: false`に設定
+
+#### Mac環境
+1. **「権限がありません」というエラー**
+   - ターミナルで実行権限を付与
+   - セキュリティ設定で許可
+
+2. **「Blenderが見つかりません」というエラー**
+   - Blenderアプリケーションが正しい場所にインストールされているか確認
+   - Steam版を使用している場合、Steamが正常にインストールされているか確認
+
+### 注意事項
+- パスに日本語やスペースが含まれる場合、正常に動作しない可能性があります
+- ファイル名やパスは半角英数字を推奨します
+- Steam版Blenderを使用する場合、Steamが起動している必要はありません
 別の場所にBlenderをインストールしている場合は、`export.command`をテキストエディタで開き、`BLENDER_PATH`を適切なパスに変更してください。
 
 ## 設定ファイル（config.yaml）
