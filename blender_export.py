@@ -2,6 +2,7 @@ import bpy
 import ftplib
 import re
 import sys
+import os
 from pathlib import Path
 
 class SimpleYAMLParser:
@@ -11,7 +12,7 @@ class SimpleYAMLParser:
     def parse_value(self, value_str):
         """値を適切な型に変換"""
         if value_str is None or value_str == "":
-            return value_str
+            return ""  # Noneの代わりに空文字列を返す
 
         # 文字列を小文字に変換して比較
         value_lower = str(value_str).lower()
@@ -44,68 +45,97 @@ class SimpleYAMLParser:
         print("\n=== YAMLパース処理開始 ===")
         print(f"YAMLファイルを読み込み: {file_path}")
 
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-            # print("読み込んだYAMLの内容:")
-            # print(content)
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+        except Exception as e:
+            print(f"ファイル読み込みエラー: {str(e)}")
+            raise
 
         self.data = {}
         current_dict = self.data
-        current_section = None
         section_stack = []
+        last_indent = 0
 
-        with open(file_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.rstrip()
+        try:
+            for line_num, line in enumerate(content.splitlines(), 1):
                 if not line or line.strip().startswith('#'):
                     continue
 
-                indent = len(line) - len(line.lstrip())
-                line = line.lstrip()
+                try:
+                    indent = len(line) - len(line.lstrip())
+                    line = line.lstrip()
 
-                # セクションの開始
-                if ':' in line and not line.split(':', 1)[1].strip():
-                    key = line.split(':', 1)[0].strip()
+                    # インデントの変更を処理
+                    if indent < last_indent:
+                        while section_stack and section_stack[-1][1] >= indent:
+                            section_stack.pop()
+                        if section_stack:
+                            current_dict = section_stack[-1][0]
+                        else:
+                            current_dict = self.data
 
-                    # インデントに基づいて適切な親を選択
-                    while section_stack and section_stack[-1][1] >= indent:
-                        section_stack.pop()
+                    last_indent = indent
 
-                    if section_stack:
-                        parent_dict = section_stack[-1][0]
-                    else:
-                        parent_dict = self.data
+                    # セクションの開始
+                    if ':' in line and not line.split(':', 1)[1].strip():
+                        key = line.split(':', 1)[0].strip()
 
-                    if key == 'blend_files':
-                        parent_dict[key] = []
-                        current_dict = parent_dict[key]
-                    else:
-                        parent_dict[key] = {}
-                        current_dict = parent_dict[key]
+                        if section_stack:
+                            parent_dict = section_stack[-1][0]
+                        else:
+                            parent_dict = self.data
 
-                    section_stack.append((current_dict, indent))
-                    continue
+                        if key == 'blend_files':
+                            parent_dict[key] = []
+                            current_dict = parent_dict[key]
+                        else:
+                            parent_dict[key] = {}
+                            current_dict = parent_dict[key]
 
-                # リストアイテム
-                if line.startswith('-'):
-                    if isinstance(current_dict, list):
-                        current_dict.append({})
-                        current_dict = current_dict[-1]
-                    line = line[1:].strip()
+                        section_stack.append((current_dict, indent))
+                        continue
 
-                # キー・バリューペア
-                if ':' in line:
-                    key, value = line.split(':', 1)
-                    key = key.strip()
-                    value = value.strip()
+                    # リストアイテムの処理
+                    if line.startswith('-'):
+                        if isinstance(current_dict, list):
+                            current_dict.append({})
+                            current_dict = current_dict[-1]
+                        elif isinstance(current_dict, dict) and 'blend_files' in current_dict:
+                            current_dict['blend_files'].append({})
+                            current_dict = current_dict['blend_files'][-1]
+                        line = line[1:].strip()
 
-                    if isinstance(current_dict, dict):
-                        current_dict[key] = self.parse_value(value)
+                    # キー・バリューペアの処理
+                    if ':' in line:
+                        key, value = line.split(':', 1)
+                        key = key.strip()
+                        value = value.strip()
+
+                        if isinstance(current_dict, dict):
+                            current_dict[key] = self.parse_value(value)
+
+                except Exception as e:
+                    print(f"行 {line_num} の処理中にエラーが発生: {line}")
+                    print(f"エラー詳細: {str(e)}")
+                    raise
+
+            # 必須セクションの確認と初期化
+            if 'blend_files' not in self.data:
+                self.data['blend_files'] = []
+            if 'ftp_settings' not in self.data:
+                self.data['ftp_settings'] = {}
+            if 'export_settings' not in self.data:
+                self.data['export_settings'] = {}
 
             print("\nパース結果:")
             print(f"blend_files: {self.data.get('blend_files', [])}")
             print(f"ftp_settings: {self.data.get('ftp_settings', {})}")
             return self.data
+
+        except Exception as e:
+            print(f"YAMLパースエラー: {str(e)}")
+            raise
 
 class BlenderExporter:
     def __init__(self, config_path="config.yaml", output_filename=None):
@@ -364,6 +394,9 @@ class BlenderExporter:
             return
 
         print(f"処理対象ファイル数: {len(self.blend_files)}")
+        print("処理対象ファイル一覧:")
+        for i, file_info in enumerate(self.blend_files, 1):
+            print(f"  {i}: {file_info}")
 
         for index, file_info in enumerate(self.blend_files, 1):
             print(f"\n=== ファイル {index}/{len(self.blend_files)} の処理開始 ===")
