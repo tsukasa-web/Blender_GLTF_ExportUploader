@@ -207,6 +207,127 @@ BlenderのGLTF/GLBエクスポート機能をコンソールから実行し、FT
 | `output_name` | 出力ファイル名       | `"output.gltf"`         |
 | `remote_path` | 個別のアップロード先 | `"/assets/model/test/"` |
 
+## 処理対象ファイルリスト（blend_files）の設定
+
+`config.yaml`の`blend_files`セクションでは、処理対象のBlenderファイルとその出力設定を指定します。
+
+### 基本的な設定方法
+
+#### 単一ファイルの設定
+```yaml
+blend_files:
+  - file_path: "./model_01.blend"
+    output_name: "character_01"
+    remote_path: "/assets/model/characters/"
+```
+
+#### 複数ファイルの設定
+```yaml
+blend_files:
+  - file_path: "./model_01.blend"
+    output_name: "character_01"
+    remote_path: "/assets/model/characters/"
+
+  - file_path: "./model_02.blend"
+    output_name: "stage_01"
+    remote_path: "/assets/model/stages/"
+```
+
+### 設定項目の説明
+
+| パラメータ    | 必須 | 説明                         | デフォルト値                   |
+| ------------- | ---- | ---------------------------- | ------------------------------ |
+| `file_path`   | ○    | .blendファイルへのパス       | -                              |
+| `output_name` | ×    | 出力ファイル名（拡張子なし） | export_settingsのfilename      |
+| `remote_path` | ×    | FTPアップロード先のパス      | ftp_settingsのremote_directory |
+
+### パスの指定方法
+
+#### 相対パス
+- カレントディレクトリからの相対パスで指定
+```yaml
+file_path: "./models/character.blend"
+file_path: "../assets/stage.blend"
+```
+
+#### 絶対パス
+- ファイルの完全なパスで指定
+```yaml
+file_path: "C:/Projects/MyGame/models/character.blend"
+file_path: "/Users/username/Projects/MyGame/models/character.blend"
+```
+
+### 設定例
+
+#### 基本的な例
+```yaml
+blend_files:
+  - file_path: "./character.blend"
+    output_name: "player_model"
+```
+
+#### 出力名のみ指定
+```yaml
+blend_files:
+  - file_path: "./character.blend"
+    output_name: "player_model"
+
+  - file_path: "./weapon.blend"
+    output_name: "sword_01"
+```
+
+#### アップロード先の個別指定
+```yaml
+blend_files:
+  - file_path: "./character.blend"
+    output_name: "player_model"
+    remote_path: "/assets/characters/"
+
+  - file_path: "./weapon.blend"
+    output_name: "sword_01"
+    remote_path: "/assets/weapons/"
+```
+
+#### 完全な設定例
+```yaml
+blend_files:
+  # キャラクターモデル
+  - file_path: "./characters/player.blend"
+    output_name: "player_v1"
+    remote_path: "/assets/models/characters/"
+
+  # ステージモデル
+  - file_path: "./stages/stage_01.blend"
+    output_name: "stage_castle"
+    remote_path: "/assets/models/stages/"
+
+  # 武器モデル
+  - file_path: "./weapons/sword.blend"
+    output_name: "weapon_sword"
+    remote_path: "/assets/models/weapons/"
+```
+
+### 注意事項
+
+1. **ファイルパスについて**
+   - パスには絶対パスと相対パスの両方が使用可能
+   - Windowsパスの場合、バックスラッシュ（\）はフォワードスラッシュ（/）に変換されます
+   - パスに日本語やスペースが含まれる場合は、動作が不安定になる可能性があります
+
+2. **出力名について**
+   - `output_name`を指定しない場合、`export_settings`の`filename`が使用されます
+   - 拡張子（.gltf/.glb）は自動的に付加されるため、指定不要です
+   - 同じ出力名が複数ある場合、後のファイルが前のファイルを上書きします
+
+3. **リモートパスについて**
+   - `remote_path`を指定しない場合、`ftp_settings`の`remote_directory`が使用されます
+   - パスの末尾のスラッシュ（/）は任意です（自動的に調整されます）
+   - 指定したパスが存在しない場合、自動的に作成されます
+
+4. **処理順序**
+   - ファイルは指定された順序で順次処理されます
+   - 1つのファイルの処理が失敗しても、残りのファイルの処理は続行されます
+
 ## 注意事項
 - モディファイアを適用する設定（`export_apply`）を使用する場合、シェイプキーのエクスポートができなくなります
 - アニメーションエクスポートを有効にする場合は、`export_animations`を`true`に設定する必要があります
