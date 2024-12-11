@@ -349,6 +349,13 @@ class BlenderExporter:
             print(f"FTPアップロードエラー: {str(e)}")
             raise
 
+    def get_output_extension(self):
+        """出力形式に基づいて適切な拡張子を返す"""
+        export_format = self.export_config.get('export_format', 'GLTF_SEPARATE')
+        if export_format == 'GLB':
+            return '.glb'
+        return '.gltf'
+
     def process_files(self):
         """設定ファイルで指定された全ファイルを処理"""
         print("\n=== ファイル処理開始 ===")
@@ -374,6 +381,11 @@ class BlenderExporter:
                     if not file_path:
                         print(f"エラー: file_pathが指定されていません（ファイル {index}）")
                         continue
+
+                    # 拡張子の処理
+                    if output_name:
+                        base_name = os.path.splitext(output_name)[0]
+                        output_name = base_name + self.get_output_extension()
 
                     blend_file = Path(file_path)
                     if not blend_file.exists():

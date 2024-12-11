@@ -12,7 +12,7 @@ export_settings:
   filepath: ""
   # 既存ファイルの上書き確認 (default: true)
   check_existing: false
-  # 出力形式 - Binary(効率的) or JSON(編集しやすい) (default: "")
+  # 出力形式 - GLTF_SEPARATE or "GLB" (default: "GLTF_SEPARATE")
   export_format: "GLTF_SEPARATE"
   # 著作権情報 (default: "")
   export_copyright: ""
@@ -299,12 +299,12 @@ blend_files:
   # .blendファイルのパス
   - file_path: "./model_01.blend"
     # 出力ファイル名
-    output_name: "output_01.gltf"
+    output_name: "output_01"
     # 個別のアップロード先
     remote_path: "/assets/model/characters/"
   # .blendファイルのパス
   - file_path: "./model_02.blend"
     # 出力ファイル名
-    output_name: "output_02.gltf"
+    output_name: "output_02"
     # 個別のアップロード先
     remote_path: "/assets/model/characters/"

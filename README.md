@@ -85,7 +85,7 @@ BlenderのGLTF/GLBエクスポート機能をコンソールから実行し、FT
 | ------------------ | ----------------------------------------------- | ------------ |
 | `filepath`         | 出力ファイルパス                                | `""`         |
 | `check_existing`   | 既存ファイルの上書き確認                        | `true`       |
-| `export_format`    | 出力形式 - Binary(効率的) or JSON(編集しやすい) | `""`         |
+| `export_format`    | 出力形式 - "GLTF_SEPARATE" or "GLB" | `"GLTF_SEPARATE"`         |
 | `export_copyright` | 著作権情報                                      | `""`         |
 | `gltf_export_id`   | エクスポーターの識別子                          | `""`         |
 
